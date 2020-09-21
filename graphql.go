@@ -99,10 +99,12 @@ func (c *Client) Run(ctx context.Context, req *Request, resp interface{}) error 
 func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}) error {
 	var requestBody bytes.Buffer
 	requestBodyObj := struct {
-		Query     string                 `json:"query"`
+		Query     string                 `json:"query, omitempty"`
+		Mutation  string                 `json:"mutation, omitempty"`
 		Variables map[string]interface{} `json:"variables"`
 	}{
 		Query:     req.q,
+		Mutation:  req.m,
 		Variables: req.vars,
 	}
 	if err := json.NewEncoder(&requestBody).Encode(requestBodyObj); err != nil {
@@ -110,6 +112,7 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 	}
 	c.logf(">> variables: %v", req.vars)
 	c.logf(">> query: %s", req.q)
+	c.logf(">> mutation: %s", req.m)
 	gr := &graphResponse{
 		Data: resp,
 	}
@@ -181,6 +184,7 @@ func (c *Client) runWithPostFields(ctx context.Context, req *Request, resp inter
 	c.logf(">> variables: %s", variablesBuf.String())
 	c.logf(">> files: %d", len(req.files))
 	c.logf(">> query: %s", req.q)
+	c.logf(">> mutation: %s", req.m)
 	gr := &graphResponse{
 		Data: resp,
 	}
@@ -265,6 +269,7 @@ type graphResponse struct {
 // Request is a GraphQL request.
 type Request struct {
 	q     string
+	m     string
 	vars  map[string]interface{}
 	files []File
 
@@ -277,6 +282,15 @@ type Request struct {
 func NewRequest(q string) *Request {
 	req := &Request{
 		q:      q,
+		Header: make(map[string][]string),
+	}
+	return req
+}
+
+// NewMutationRequest makes a new Request with the specified string.
+func NewMutationRequest(m string) *Request {
+	req := &Request{
+		m:      m,
 		Header: make(map[string][]string),
 	}
 	return req
@@ -303,6 +317,11 @@ func (req *Request) Files() []File {
 // Query gets the query string of this request.
 func (req *Request) Query() string {
 	return req.q
+}
+
+// Mutation gets the mutation string of this request.
+func (req *Request) Mutation() string {
+	return req.m
 }
 
 // File sets a file to upload.
